@@ -1,0 +1,53 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+
+# --- Environments ---
+.venv/
+venv/
+env/
+*.env
+
+# --- Numba cache ---
+__pycache__/*.nbi
+__pycache__/*.nbc
+
+# --- Large / generated data (opt in explicitly, don't drag in cluster dumps) ---
+scratch/
+outputs/
+results/
+*.log
+*.tmp
+
+# Keep canonical small datasets tracked; ignore everything else CSV-shaped by default.
+# Comment out or adjust if you want a specific large file excluded instead.
+*.csv
+!progress - Pure Full Results Original - Copy.csv
+
+# --- MATLAB ---
+*.asv
+*.m~
+slprj/
+
+# --- OS / editor junk ---
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.vscode/
+.idea/
+
+# --- OneDrive sync artifacts ---
+*.tmp.driveupload
+~$*
+
+# --- Secrets / credentials — never commit ---
+*.pem
+*.key
+credentials.json
+config_local.py
