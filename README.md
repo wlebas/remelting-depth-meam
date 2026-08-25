@@ -1,112 +1,117 @@
 # Inter-Layer Remelting in Metal Extrusion Additive Manufacturing
 
 Analytical and numerical framework for predicting inter-layer remelting during
-metal extrusion additive manufacturing (MEX/WAAM), developed as part of a
-two-paper series:
+metal extrusion additive manufacturing (MEX/WAAM). The code implements a
+one-dimensional enthalpy-based finite-difference solver for the two-domain
+Stefan problem (hot deposit on cold substrate), a dimensionless
+Latin-hypercube sweep driver, and the analysis pipeline used to derive and
+validate the correlations reported in the accompanying manuscript(s).
 
-- **Paper 1** — Melt/no-melt onset classifier: closed-form existence condition
-  `E/(1+E) > θ_liq` derived from the λ→0 limit of the Neumann similarity
-  solution, validated numerically (AUC ≈ 1.0).
-- **Paper 2** — Remelting depth correlation:
-  `D_rem ≈ 1.69 · Π_c^0.775 · margin`, alongside a fully-derived Lambert-W
-  chain (zero fitted constants).
+Two solidification models are supported:
 
-Six governing dimensionless groups (effusivity ratio `E`, heat capacity ratio
-`C`, diffusivity ratio `r`, `Ste_hot`, `Ste_cold`, and `margin =
-E/(1+E) − θ_liq`) parameterize both the onset criterion and the depth model.
-Process maps are generated via finite-difference sweeps across the pure-metal
-set (AlSi12, Pure Al, Pure Cu, Pure Ti) and a broader alloy set (Scheil
-solidification track).
+- **Pure metal / eutectic** — isothermal phase change at `θ_m`.
+- **Scheil** — non-equilibrium mushy-zone solidification.
+
+The problem is parameterised by the dimensionless groups swept in
+`dimensionless_sweep_pure.py`: effusivity ratio `E`, heat-capacity ratio `C`,
+diffusivity ratio `r`, Stefan numbers `Ste_hot` and `Ste_cold`, and the
+normalised melting temperature `θ_m`.
 
 ## Status
 
-Preprint / manuscript in preparation, target venue IJHMT. This repository
-will be tagged at the commit corresponding to submission (`v1.0-submission`)
-once ready.
+Manuscript in preparation; target venue IJHMT. The repository will be tagged
+at the commit corresponding to submission (`v1.0-submission`).
 
-## Repository structure
+## Repository contents
 
 ```
 .
-├── kernels.py                          # FD solver cores (pure-metal, Scheil)
-├── solvers.py                          # fd_solve — top-level solver entry point
-├── grid.py                             # grid construction / sizing
-├── materials.py                        # dimensionless group computation
-├── analytical.py                       # Stefan/Neumann similarity solutions
-├── conventions.py                      # sign/normalisation conventions + checks
-├── config_pipeline.py                  # CONVENTIONS / PARAMS, config fingerprinting
-├── dimensionless_sweep_pure.py         # LHS sweep generation & job runner (pure)
-├── dimensionless_sweep_scheil.py       # LHS sweep generation & job runner (Scheil)
-├── analysis_pipeline.py                # post-processing / metrics / correlation fitting
-├── time_single_case_v2.py              # single-case timing/profiling (pure)
-├── time_single_case_scheil.py          # single-case timing/profiling (Scheil)
-├── progress__Pure_Full_Results_Original.csv   # canonical pure-metal results dataset
-└── __Verification___Analysis_Plan_v4___Pure.md # verification & analysis plan
+├── kernels.py                    # Numba FD solver cores (pure-metal, Scheil)
+├── solvers.py                    # fd_solve — top-level solver entry point
+├── grid.py                       # grid construction (build_grid) and run sizing (size_run)
+├── materials.py                  # dimensional properties → dimensionless groups
+├── analytical.py                 # Stefan / Neumann similarity solutions
+├── conventions.py                # normalisation conventions + self-check suite
+├── config_pipeline.py            # CONVENTIONS / PARAMS, config fingerprinting
+├── dimensionless_sweep_pure.py   # LHS sweep driver (pure-metal / eutectic)
+├── dimensionless_sweep_scheil.py # LHS sweep driver (Scheil)
+├── analysis_pipeline.py          # post-processing, correlation fitting, metrics
+├── case_study.py                 # single-case study / dimensional worked example
+├── Dockerfile                    # container definition used for cluster runs
+├── requirements.txt
+└── progress - Pure Full Results Original - Copy.csv   # canonical pure-metal sweep output
 ```
 
 ## Installation
 
 ```bash
-git clone https://github.com/<your-username>/<repo-name>.git
-cd <repo-name>
+git clone https://github.com/wlebas/remelting-depth-meam.git
+cd remelting-depth-meam
 python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
+.venv\Scripts\activate          # Windows
+# source .venv/bin/activate     # Linux / macOS
 pip install -r requirements.txt
 ```
 
 Requires Python ≥ 3.10.
 
-## Reproducing a result
+## Usage
 
-Run a single case (useful sanity check / timing baseline):
-
-```bash
-python time_single_case_v2.py
-```
-
-Run the full dimensionless sweep (pure-metal set):
+**Verify conventions and solver self-checks:**
 
 ```bash
-python dimensionless_sweep_pure.py
+python conventions.py
 ```
 
-> Full sweeps (tens of thousands of cases) were run on EPFL RCP
-> (Kubernetes/Run:ai) using the Docker image
-> `registry.rcp.epfl.ch/lmm-lebas/remelting_depth:<commit-hash>`. The image
-> definition is not publicly hosted, but the sweep scripts here run
-> equivalently on a local multicore machine at reduced throughput — the
-> workload is memory-bandwidth-limited, not cluster-specific.
-
-Post-process results and generate fit/validation metrics:
+Optionally audit an existing results file:
 
 ```bash
-python analysis_pipeline.py
+python conventions.py --csv "progress - Pure Full Results Original - Copy.csv"
 ```
+
+**Run the dimensionless sweep (pure-metal / eutectic):**
+
+```bash
+python dimensionless_sweep_pure.py --n_lhs 1000 --workers 8 --output results_pure.csv
+```
+
+Useful flags: `--resume` (continue an interrupted sweep from its checkpoint),
+`--seed` (reproducible LHS), `--dry_run` (build the job list without solving),
+`--neumann` (Neumann-comparison mode). The Scheil driver
+(`dimensionless_sweep_scheil.py`) takes the same interface.
+
+**Post-process and fit correlations:**
+
+```bash
+python analysis_pipeline.py --csv "progress - Pure Full Results Original - Copy.csv" \
+                            --model pure \
+                            --outdir analysis_out
+```
+
+`--model` is required and selects `pure` or `scheil`. Phases can be selected
+with `--phases` (default `0,1,2,3,4,5`); `--no-plots` suppresses figure
+generation.
 
 ## Data
 
-`progress__Pure_Full_Results_Original.csv` (~30k rows) is the canonical
-pure-metal results dataset referenced in the manuscript. Columns are the raw
-dimensionless groups, FD outputs (`D_rem`, `t_at_max_remelt`, etc.), and
-provenance flags (`refined`, `status`, `config_fingerprint`).
+`progress - Pure Full Results Original - Copy.csv` is the canonical pure-metal
+sweep output referenced in the manuscript. Each row is one
+(material point × operating point) case; columns comprise the swept
+dimensionless groups, derived quantities (`lam_neumann`, `k_ratio`,
+`rho_ratio`, …), solver outputs (`D_rem`, `t_at_max_remelt`, `Z_total`), and
+provenance flags (`refined`, `time_capped`, `domain_capped`, `status`,
+`config_fingerprint`).
 
-The larger Scheil sweep dataset (~35k rows) is not included directly in this
-repo; see the paper's data availability statement / Zenodo link (TBD) for the
-archived version with a DOI.
 
-## Grid convergence
+## Reproducibility
 
-Default spatial step `dz = 0.0025` carries ~0.53% bias relative to
-`dz = 0.00125`. A coarser `dz = 0.005` is ~8× cheaper and within tolerance if
-compute time is constrained; see the verification plan for details.
+Full sweeps were executed on the EPFL RCP cluster (Kubernetes / Run:ai) using
+the container defined in `Dockerfile`. The sweep drivers run unmodified on a
+local multicore machine at reduced throughput. Every results file records a
+`config_fingerprint` identifying the `PARAMS` set used to generate it; this
+should be checked before combining results across runs.
 
 ## Citation
 
-If you use this code, please cite the associated paper(s) (citation details
-to be added on publication). A `CITATION.cff` will be added once a DOI is
-assigned.
-
-## License
-
-MIT (or specify — see `LICENSE`).
-
+Citation details will be added on publication. A `CITATION.cff` will be added
+once a DOI is assigned.
