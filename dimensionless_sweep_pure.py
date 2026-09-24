@@ -122,6 +122,50 @@ LHS_AXES = {
 STE_COLD_OP = P.ste_cold_op   # (0.10, 0.25, 0.50, 0.90, 1.40, 2.00)
 STE_HOT_OP  = np.linspace(0.15, 6.00, 20)    # (0.05, 0.15, 0.30, 0.60, 1.00)
 
+PHYS_AXES = {
+    'k_ratio':   ('log',    0.28, 1.28),
+    'rho_ratio': ('linear', 0.80, 1.10),
+    'cp_ratio':  ('linear', 0.98, 1.45),
+}
+
+# Melt-biased operating grid (replaces STE_COLD_OP / STE_HOT_OP for this
+# sweep only -- same 6x5=30 shape, shifted toward the melting region).
+STE_COLD_OP_REAL = (0.05, 0.10, 0.20, 0.35, 0.55, 0.80)
+STE_HOT_OP_REAL  = (0.20, 0.35, 0.55, 0.85, 1.30)
+
+def generate_lhs_real(n_lhs, seed=None):
+    """
+    Generate n_lhs points on the physical manifold, sampling
+    (k_ratio, rho_ratio, cp_ratio) directly and deriving (E, C, r).
+
+    Returns np.ndarray shape (n_lhs, 3), columns [E, C, r] -- same column
+    order as generate_lhs(), so build_job_list() needs no changes.
+    """
+    if seed is None:
+        seed = P.rng_seed
+
+    axes   = list(PHYS_AXES.keys())   # ['k_ratio', 'rho_ratio', 'cp_ratio']
+    n_axes = len(axes)
+
+    sampler = qmc.LatinHypercube(d=n_axes, rng=seed)
+    unit    = sampler.random(n=n_lhs)
+
+    phys = np.empty_like(unit)
+    for j, ax in enumerate(axes):
+        scale, lo, hi = PHYS_AXES[ax]
+        if scale == 'log':
+            phys[:, j] = np.exp(unit[:, j] * (np.log(hi) - np.log(lo)) + np.log(lo))
+        else:
+            phys[:, j] = unit[:, j] * (hi - lo) + lo
+
+    k_ratio, rho_ratio, cp_ratio = phys[:, 0], phys[:, 1], phys[:, 2]
+
+    E = np.sqrt(k_ratio * rho_ratio * cp_ratio)
+    C = cp_ratio
+    r = k_ratio / (rho_ratio * cp_ratio)
+
+    out = np.column_stack([E, C, r])
+    return out   # columns: E, C, r -- same as generate_lhs()
 
 # ── after LHS_AXES, before STE_COLD_OP/STE_HOT_OP ──────────────────────────
 # Targeted r-crossing validation sweep (linearity-criterion check).
@@ -446,23 +490,24 @@ def generate_targeted_grid():
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ── build_job_list: accept an override grid (minimal signature change) ─────
-def build_job_list(lhs_pts, compute_neumann=False, ste_hot_op=None):
+def build_job_list(lhs_pts, ste_cold_op, ste_hot_op, compute_neumann=False):
     """
-    ...
-    ste_hot_op : override for STE_HOT_OP (used by the targeted sweep to
-                 swap in the dense log-spaced grid without touching the
-                 module-level default used by the canonical sweep).
+    ste_cold_op, ste_hot_op : the operating grids to use for this sweep
+                 (e.g. STE_COLD_OP/STE_HOT_OP for the canonical sweep,
+                 STE_COLD_OP_REAL/STE_HOT_OP_REAL for --real_materials,
+                 or STE_COLD_OP/STE_HOT_OP_TARGETED for --targeted).
+                 Always passed explicitly by run_sweep -- no module-level
+                 fallback here, so there is only one place a sweep's op
+                 grid is chosen.
     """
-    sh_op = ste_hot_op if ste_hot_op is not None else STE_HOT_OP
     op_points = [(float(sc), float(sh))
-                 for sc in STE_COLD_OP for sh in sh_op]
+                 for sc in ste_cold_op for sh in ste_hot_op]
     jobs = []
     for i, (E, C, r) in enumerate(lhs_pts):
         E, C, r = float(E), float(C), float(r)
         for op_id, (sc, sh) in enumerate(op_points):
             jobs.append((i, op_id, E, C, r, sc, sh, compute_neumann))
     return jobs
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 7.  Resume logic
@@ -486,7 +531,7 @@ def load_done_keys(csv_path):
 
 # ── run_sweep: add a targeted switch ────────────────────────────────────────
 def run_sweep(n_lhs, workers, output_csv, resume, dry_run=False, seed=None,
-              compute_neumann=False, targeted=False):
+              compute_neumann=False, targeted=False, real_materials = False):
     out_path = Path(output_csv)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -504,12 +549,17 @@ def run_sweep(n_lhs, workers, output_csv, resume, dry_run=False, seed=None,
         print(f"  Targeted grid: {len(TARGETED_EC_PAIRS)} (E,C) pairs x "
               f"{TARGETED_N_R} r-values = {len(lhs_pts)} materials")
     else:
-        lhs_pts = generate_lhs(n_lhs, seed=seed)
+        if real_materials:
+          lhs_pts   = generate_lhs_real(n_lhs, seed=seed)
+          ste_cold_op, ste_hot_op = STE_COLD_OP_REAL, STE_HOT_OP_REAL
+        else:
+          lhs_pts   = generate_lhs(n_lhs, seed=seed)
+          ste_cold_op, ste_hot_op = STE_COLD_OP, STE_HOT_OP
 
     print(f"  Total planned runs: {len(lhs_pts) * n_ops}")
 
-    all_jobs = build_job_list(lhs_pts, compute_neumann=compute_neumann,
-                               ste_hot_op=ste_hot_op)
+    all_jobs = build_job_list(lhs_pts, ste_cold_op, ste_hot_op,
+            compute_neumann=compute_neumann)
     print(f"  Generated {len(all_jobs)} jobs"
           + ("  [+neumann]" if compute_neumann else ""))
 
@@ -600,6 +650,11 @@ def _parse():
         description='Pure-metal sweep driver: LHS × op-grid with inline refinement')
     p.add_argument('--n_lhs',   type=int, default=P.n_lhs,
                    help=f'LHS material points (default {P.n_lhs})')
+    p.add_argument('--real_materials', action='store_true',
+                     help='Sample on the real-material manifold '
+                          '(k_ratio, rho_ratio, cp_ratio) with a '
+                          'melt-biased operating grid, instead of the '
+                          'default (E, C, r) box sweep.')
     p.add_argument('--workers', type=int, default=1,
                    help='Parallel workers (default 1)')
     p.add_argument('--output',  type=str, default=str(DEFAULT_OUTPUT),
@@ -630,4 +685,5 @@ if __name__ == '__main__':
         seed           = args.seed,
         compute_neumann= args.neumann,
         targeted       = args.targeted,
+        real_materials= args.real_materials,
     )

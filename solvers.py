@@ -115,7 +115,7 @@ class SolverResult:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def fd_solver_pure(adim_groups, z, interface_idx, dt, nt_max,
-                   snapshot_indices) -> SolverResult:
+                   snapshot_indices, build_frames: bool = True) -> SolverResult:
     """
     Public entry point for the pure-metal / eutectic FD solver.
 
@@ -159,12 +159,7 @@ def fd_solver_pure(adim_groups, z, interface_idx, dt, nt_max,
 
     max_remelting = float(np.max(melt_front_position))
     dz = float(z[1] - z[0])
-
-    if max_remelting < 0.5 * dz:
-        t_max_remelt = 0
-    else:
-        near_max = np.where(melt_front_position >= max_remelting - 0.5 * dz)[0]
-        t_max_remelt = int(round(0.5 * (near_max[0] + near_max[-1])))
+    t_max_remelt = int(np.argmax(melt_front_position))
 
     scalars = {
         'max_remelting'       : max_remelting,
@@ -172,18 +167,22 @@ def fd_solver_pure(adim_groups, z, interface_idx, dt, nt_max,
         'final_interface_temp': float(interface_temperature[last_step]),
     }
 
-    df_time = pd.DataFrame({
-        'timestep'               : np.arange(nt_max),
-        'interface_temperature'  : interface_temperature,
-        'liquidus_front_position': melt_front_position,
-        'solidus_front_position' : melt_front_position,   # coincide for pure
-    }).iloc[:last_step + 1]
+    if build_frames:
+        df_time = pd.DataFrame({
+            'timestep'               : np.arange(nt_max),
+            'interface_temperature'  : interface_temperature,
+            'liquidus_front_position': melt_front_position,
+            'solidus_front_position' : melt_front_position,   # coincide for pure
+        }).iloc[:last_step + 1]
 
-    df_space = pd.DataFrame({
-        'z'                : z,
-        'temperature_field': temperature_field,
-        'T_at_max_remelt'  : T_profile_at_max_remelt,
-    })
+        df_space = pd.DataFrame({
+            'z'                : z,
+            'temperature_field': temperature_field,
+            'T_at_max_remelt'  : T_profile_at_max_remelt,
+        })
+    else:
+        df_time = None
+        df_space = None
 
     return SolverResult(
         model='pure_metal',
@@ -255,21 +254,11 @@ def fd_solver_scheil(adim_groups, z, interface_idx, dt, nt_max,
     max_solidus   = float(np.max(solidus_front_position))
     dz = float(z[1] - z[0])
 
-    if max_remelting < 0.5 * dz:
-        t_max_remelt = 0
-    else:
-        near_max_liq = np.where(liquidus_front_position >= max_remelting - 0.5 * dz)[0]
-        t_max_remelt = int(round(0.5 * (near_max_liq[0] + near_max_liq[-1])))
-
-    if max_solidus < 0.5 * dz:
-        t_max_solidus = 0
-    else:
-        near_max_sol = np.where(solidus_front_position >= max_solidus - 0.5 * dz)[0]
-        t_max_solidus = int(round(0.5 * (near_max_sol[0] + near_max_sol[-1])))
+    t_max_remelt = int(np.argmax(liquidus_front_position))
+    t_max_solidus = int(np.argmax(solidus_front_position))
     mushy_width_at_max_remelt = float(
-        solidus_front_position[t_max_remelt] - liquidus_front_position[t_max_remelt]
-    )
-
+    solidus_front_position[t_max_remelt] - liquidus_front_position[t_max_remelt])
+    
     scalars = {
         'max_remelting'            : max_remelting,
         'max_solidus'              : max_solidus,

@@ -32,6 +32,7 @@ def _fd_solver_core_pure(
 
     nz = len(z)
     dz = z[1] - z[0]              # uniform grid assumed (as before)
+    z_iface = z[interface_idx] + 0.5 * dz      # == h exactly
 
     # ── Fixed constitutive constants ───────────────────────────────────────────
     B_liq   = rho_ratio * cp_ratio      # (rho*cp)_l / (rho*cp)_s
@@ -102,10 +103,10 @@ def _fd_solver_core_pure(
 
         # ── Adiabatic boundary conditions (ghost nodes, unchanged) ────────────
         enthalpy_field_new[0] = enthalpy_field[0] + dt * (
-            2.0 * k_tilde[0] * (temperature_field[1] - temperature_field[0]) / dz**2
+            k_tilde[0] * (temperature_field[1] - temperature_field[0]) / dz**2
         )
         enthalpy_field_new[-1] = enthalpy_field[-1] + dt * (
-            2.0 * k_tilde[-1] * (temperature_field[-2] - temperature_field[-1]) / dz**2
+            k_tilde[-1] * (temperature_field[-2] - temperature_field[-1]) / dz**2
         )
 
         enthalpy_field = enthalpy_field_new
@@ -129,29 +130,29 @@ def _fd_solver_core_pure(
                 k_tilde[i] = 1.0 + (k_ratio - 1.0) * fl
 
         # ── Interface temperature ─────────────────────────────────────────────
-        interface_temperature[n] = temperature_field[interface_idx]
+        ki, kj = k_tilde[interface_idx], k_tilde[interface_idx + 1]
+        interface_temperature[n] = (ki * temperature_field[interface_idx]
+                              + kj * temperature_field[interface_idx + 1]) / (ki + kj)
 
         # ── Single melt front tracking (sub-cell linear interpolation) ────────
         # Search from interface_idx+1: remelting is only meaningful when a
-        # substrate node reaches theta_melt.
+        # substrate node reaches theta_melt. Using the fraction liquid to interpolate the 
+        # position of the melting front
         last_melt = -1
         for j in range(interface_idx + 1, nz):
             if temperature_field[j] >= theta_melt:
                 last_melt = j
 
-        if 0 <= last_melt < nz - 1:
-            th_a = temperature_field[last_melt]
-            th_b = temperature_field[last_melt + 1]
-            dth  = th_a - th_b
-            if dth > 1e-12:
-                z_front = (z[last_melt]
-                           + (th_a - theta_melt) / dth
-                           * (z[last_melt + 1] - z[last_melt]))
+        if last_melt >= 0:
+            Hi = enthalpy_field[last_melt]
+            if Hi >= H_liq_m:
+                fl_last = 1.0
+            elif Hi <= H_sol_m:
+                fl_last = 0.0
             else:
-                z_front = z[last_melt]
-            melt_front_position[n] = z_front - z[interface_idx]
-        elif last_melt == nz - 1:
-            melt_front_position[n] = z[last_melt] - z[interface_idx]
+                fl_last = (Hi - H_sol_m) / L_star
+            z_front = z[last_melt] + (fl_last - 0.5) * dz
+            melt_front_position[n] = z_front - z_iface
 
         # ── Track temperature profile at maximum remelting ────────────────────
         if melt_front_position[n] > current_max_melt:
@@ -279,6 +280,8 @@ def _fd_solver_core_scheil(
  
     nz         = len(z)
     dz         = z[1] - z[0]
+    z_iface = z[interface_idx] + 0.5 * dz      # == h exactly
+
     scheil_exp = 1.0 / (1.0 - k_p)
     B          = rho_ratio * cp_ratio               # (ρcp)_l / (ρcp)_s
     L_star     = (theta_liquidus - theta_solidus) / Ste_m  # latent heat, solid-ref
@@ -353,10 +356,10 @@ def _fd_solver_core_scheil(
  
         # ── Adiabatic BCs (ghost nodes) ───────────────────────────────────────
         enthalpy_field_new[0] = enthalpy_field[0] + dt * (
-            2.0 * k_tilde[0] * (temperature_field[1] - temperature_field[0]) / dz**2
+            k_tilde[0] * (temperature_field[1] - temperature_field[0]) / dz**2
         )
         enthalpy_field_new[-1] = enthalpy_field[-1] + dt * (
-            2.0 * k_tilde[-1] * (temperature_field[-2] - temperature_field[-1]) / dz**2
+            k_tilde[-1] * (temperature_field[-2] - temperature_field[-1]) / dz**2
         )
  
         enthalpy_field = enthalpy_field_new
@@ -387,36 +390,33 @@ def _fd_solver_core_scheil(
                 k_tilde[i] = 1.0 + (k_ratio - 1.0) * fl
  
         # ── Interface temperature ──────────────────────────────────────────────
-        interface_temperature[n] = temperature_field[interface_idx]
+        ki = k_tilde[interface_idx]
+        kj = k_tilde[interface_idx + 1]
+        interface_temperature[n] = (ki * temperature_field[interface_idx]
+            + kj * temperature_field[interface_idx + 1]) / (ki + kj)
  
         # ── Front tracking (sub-cell linear interpolation) ────────────────────
         last_liq = -1
         last_sol = -1
-        for j in range(interface_idx, nz):
+        for j in range(interface_idx + 1, nz):
             if temperature_field[j] > theta_liquidus:
                 last_liq = j
             if temperature_field[j] > theta_solidus:
                 last_sol = j
  
         if 0 <= last_liq < nz - 1:
-            th_a = temperature_field[last_liq]
-            th_b = temperature_field[last_liq + 1]
-            dth  = th_a - th_b
-            z_front = (z[last_liq] + (th_a - theta_liquidus) / dth
-                       * (z[last_liq + 1] - z[last_liq])) if dth > 1e-12 else z[last_liq]
-            liquidus_front_position[n] = z_front - z[interface_idx]
+            fl_liq = _scheil_fl(temperature_field[last_liq + 1],
+                theta_solidus, theta_liquidus, scheil_exp)
+            z_front = z[last_liq + 1] + (fl_liq - 0.5) * dz
+            liquidus_front_position[n] = z_front - z_iface
         elif last_liq == nz - 1:
-            liquidus_front_position[n] = z[last_liq] - z[interface_idx]
+            liquidus_front_position[n] = nz*dz - z_iface
  
-        if 0 <= last_sol < nz - 1:
-            th_a = temperature_field[last_sol]
-            th_b = temperature_field[last_sol + 1]
-            dth  = th_a - th_b
-            z_front = (z[last_sol] + (th_a - theta_solidus) / dth
-                       * (z[last_sol + 1] - z[last_sol])) if dth > 1e-12 else z[last_sol]
-            solidus_front_position[n] = z_front - z[interface_idx]
-        elif last_sol == nz - 1:
-            solidus_front_position[n] = z[last_sol] - z[interface_idx]
+        if last_sol >= 0:
+            fl_sol = _scheil_fl(temperature_field[last_sol],
+                theta_solidus, theta_liquidus, scheil_exp)
+            z_front = z[last_sol] + (fl_sol - 0.5) * dz
+            solidus_front_position[n] = z_front - z_iface
  
         # ── Track temperature profile at maximum remelting ────────────────────
         if liquidus_front_position[n] > current_max_liq:

@@ -95,11 +95,54 @@ _dsp.P = dataclasses.replace(_dsp.P, rho_ratio_max=10.0, t_cap=10000.0, z_cap=12
 # low-r corner, near-eutectic-like high mushy_frac/high k_p, strongly
 # partitioning low k_p).
 
+# Cases digitized from Wang, Wang & Matthys (1998), Fig. 3 -- the HIGHEST-Bi
+# curve only in each panel (Cu:Bi=177, Al:Bi=143, Steel:Bi=115), at 8 points
+# spanning d_max/b ~ 1e-4 to ~0.16 along that curve.
+#
+# E, C, r are exact -- computed from Table 1 material properties, independent
+# of any assumed T0. ste_hot is derived from the digitized theta_P via
+#     ste_hot = C * (theta_P - 1) * ste_cold
+# which is ALSO T0-independent (the (T_M2-T0) factor cancels in this ratio).
+# ste_cold itself is swept over {0.10, 0.25, 0.50, 0.75} -- these are free
+# choices (drawn from this project's own P.ste_cold_op grid), NOT recovered
+# from the paper. Rescale ste_hot linearly for any other ste_cold you want:
+#     ste_hot_new = ste_hot * (ste_cold_new / ste_cold_used)
+#
+# See chat for the digitization method (pixel-mapped from the PDF figure)
+# and the T0-independence derivation.
+
+# Corrected ste_cold=0.9 batch -- rescaled ste_hot from the ORIGINAL sc=0.75 file
+# by the ratio 0.9/0.75 = 1.2, so these correspond to the SAME 8 Wang target
+# points per material, just re-evaluated at ste_cold=0.9 instead of 0.75.
+# (The first sc=0.9 attempt kept the OLD ste_hot values unchanged, which
+# silently changed which physical case was being run -- see chat.)
+
 PURE_CASES = [
-    # ── critr extension: tests for saturation far beyond the FD-verified 30x onset ──
-    dict(label='linear_critr_17', E=1.0, C=1.0, r=3.069288, ste_cold=1.0, ste_hot=50.0),
-    dict(label='linear_critr_18', E=1.0, C=1.0, r=3.069288, ste_cold=1.0, ste_hot=70.0),
-    dict(label='linear_critr_19', E=1.0, C=1.0, r=3.069288, ste_cold=1.0, ste_hot=95.0),
+
+    dict(label='cu_Bi177_sc0p9_dmax0p00010', E=0.8096, C=1.0465, r=0.7414, ste_cold=0.9, ste_hot=1.1792),
+    dict(label='cu_Bi177_sc0p9_dmax0p00100', E=0.8096, C=1.0465, r=0.7414, ste_cold=0.9, ste_hot=1.183),
+    dict(label='cu_Bi177_sc0p9_dmax0p01000', E=0.8096, C=1.0465, r=0.7414, ste_cold=0.9, ste_hot=1.2131),
+    dict(label='cu_Bi177_sc0p9_dmax0p01995', E=0.8096, C=1.0465, r=0.7414, ste_cold=0.9, ste_hot=1.2696),
+    dict(label='cu_Bi177_sc0p9_dmax0p03981', E=0.8096, C=1.0465, r=0.7414, ste_cold=0.9, ste_hot=1.3318),
+    dict(label='cu_Bi177_sc0p9_dmax0p06310', E=0.8096, C=1.0465, r=0.7414, ste_cold=0.9, ste_hot=1.4005),
+    dict(label='cu_Bi177_sc0p9_dmax0p10000', E=0.8096, C=1.0465, r=0.7414, ste_cold=0.9, ste_hot=1.4994),
+    dict(label='cu_Bi177_sc0p9_dmax0p15849', E=0.8096, C=1.0465, r=0.7414, ste_cold=0.9, ste_hot=1.6586),
+    dict(label='al_Bi143_sc0p9_dmax0p00010', E=0.6551, C=0.9153, r=0.5857, ste_cold=0.9, ste_hot=1.3213),
+    dict(label='al_Bi143_sc0p9_dmax0p00100', E=0.6551, C=0.9153, r=0.5857, ste_cold=0.9, ste_hot=1.3156),
+    dict(label='al_Bi143_sc0p9_dmax0p01000', E=0.6551, C=0.9153, r=0.5857, ste_cold=0.9, ste_hot=1.3616),
+    dict(label='al_Bi143_sc0p9_dmax0p01995', E=0.6551, C=0.9153, r=0.5857, ste_cold=0.9, ste_hot=1.4012),
+    dict(label='al_Bi143_sc0p9_dmax0p03981', E=0.6551, C=0.9153, r=0.5857, ste_cold=0.9, ste_hot=1.4754),
+    dict(label='al_Bi143_sc0p9_dmax0p06310', E=0.6551, C=0.9153, r=0.5857, ste_cold=0.9, ste_hot=1.5438),
+    dict(label='al_Bi143_sc0p9_dmax0p10000', E=0.6551, C=0.9153, r=0.5857, ste_cold=0.9, ste_hot=1.65),
+    dict(label='al_Bi143_sc0p9_dmax0p15849', E=0.6551, C=0.9153, r=0.5857, ste_cold=0.9, ste_hot=1.8173),
+    dict(label='steel_Bi115_sc0p9_dmax0p00010', E=1.069, C=1.2545, r=0.75, ste_cold=0.9, ste_hot=1.1268),
+    dict(label='steel_Bi115_sc0p9_dmax0p00100', E=1.069, C=1.2545, r=0.75, ste_cold=0.9, ste_hot=1.1245),
+    dict(label='steel_Bi115_sc0p9_dmax0p01000', E=1.069, C=1.2545, r=0.75, ste_cold=0.9, ste_hot=1.1494),
+    dict(label='steel_Bi115_sc0p9_dmax0p01995', E=1.069, C=1.2545, r=0.75, ste_cold=0.9, ste_hot=1.1742),
+    dict(label='steel_Bi115_sc0p9_dmax0p03981', E=1.069, C=1.2545, r=0.75, ste_cold=0.9, ste_hot=1.2374),
+    dict(label='steel_Bi115_sc0p9_dmax0p06310', E=1.069, C=1.2545, r=0.75, ste_cold=0.9, ste_hot=1.2894),
+    dict(label='steel_Bi115_sc0p9_dmax0p10000', E=1.069, C=1.2545, r=0.75, ste_cold=0.9, ste_hot=1.3854),
+    dict(label='steel_Bi115_sc0p9_dmax0p15849', E=1.069, C=1.2545, r=0.75, ste_cold=0.9, ste_hot=1.5253),
 ]
 """
 # ── NONLINEAR: r=0.02, Ste_cold=5.0, 1.05x -> 30x onset ──────────────────

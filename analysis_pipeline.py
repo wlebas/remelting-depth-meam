@@ -354,12 +354,12 @@ def load_data(csv_path: str, model: str, legacy: bool) -> pd.DataFrame:
     return df
 
 
-def classify_melt(D_rem: pd.Series, no_melt_thr=0.005) -> pd.Series:
+def classify_melt(D_rem: pd.Series, no_melt_thr=0.000) -> pd.Series:
     """The ONLY population split used for modelling: did this case melt at
     all, by the FD ground truth. Replaces the old three-way classify_population
     — see module docstring for why the transient/resolved distinction was
     dropped (no detectable regime change at the old D_rem=0.10 boundary)."""
-    return D_rem >= no_melt_thr
+    return D_rem > no_melt_thr
 
 
 def shallow_band_mask(D_rem_coarse: pd.Series, no_melt_thr=0.005, refine_hi=0.10) -> pd.Series:

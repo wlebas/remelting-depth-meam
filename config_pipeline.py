@@ -94,6 +94,7 @@ class Params:
     # ── Grid resolution ───────────────────────────────────────────────────────
     dz_coarse: float = 0.01    # sweep grid spacing [h]   (Pure_metal_sweep DZ_FINE)
     dz_fine:   float = 0.0025  # refinement grid spacing [h] (shallow-band refine)
+    grid_convention: str = "cell-face"    # was "node-centred" through 2026-08
 
     # ── Time / domain a-priori sizing (sweep_sizing.py, calibrated June 2026) ─
     # t_total = max(tau_dev_mult · tau_dev, t_floor), capped at t_cap.
@@ -107,12 +108,12 @@ class Params:
     z_cap:   float = 40.0      # hard cap; cases above → flagged domain_capped
     farfield_eps: float = 0.01 # allowed far-field θ at bottom boundary
 
-    # ── Three-population thresholds ───────────────────────────────────────────
-    # none: D_rem < no_melt ;  shallow/transient: [no_melt, resolved) ;
-    # resolved: ≥ resolved.  These define BOTH the population split AND the
-    # refinement band, so they live in one place.
-    no_melt_threshold:  float = 0.005
+    # ── Melting thresholds ───────────────────────────────────────────
+    # Clarifies, that any positive value means melting has occurred, defines the threshold for which
+    # re-run will occur.
+    no_melt_threshold:  float = 0.000
     resolved_threshold: float = 0.10
+    refine_zero_if_lam: bool = True 
 
     # ── Refinement band (must equal the shallow population band) ──────────────
     # Cases with coarse D_rem in [shallow_lo, shallow_hi) are re-run at dz_fine.
@@ -210,7 +211,7 @@ def validate(conv: Conventions, par: Params) -> None:
     errs = []
 
     # Population thresholds ordered
-    if not (0.0 < par.no_melt_threshold < par.resolved_threshold):
+    if not (0.0 <= par.no_melt_threshold < par.resolved_threshold):
         errs.append("require 0 < no_melt_threshold < resolved_threshold")
 
     # Refinement band ordered; upper edge tied to the resolved population

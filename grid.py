@@ -89,9 +89,11 @@ def build_grid(Z_total: float,
     """
     if h is None:
         h = CV.deposit_h
-
-    z = np.linspace(0.0, Z_total, int(round(Z_total / dz)) + 1)
-    interface_idx = int(np.argmin(np.abs(z - h)))
+    n_cells = int(round(Z_total / dz))
+    z = (np.arange(n_cells) + 0.5) * dz          # cell centres; faces at 0, dz, 2dz, ...
+    n_dep = int(round(h / dz))
+    assert abs(n_dep * dz - h) < 1e-12, "deposit thickness must be an exact multiple of dz"
+    interface_idx = n_dep - 1                     # last deposit node; interface = face at z = h
 
     # Adimensionalised diffusivities (solid = 1 by convention); liquid = r.
     alpha_max = max(1.0, r)
@@ -99,7 +101,7 @@ def build_grid(Z_total: float,
     nt_max = int(t_total / dt)
 
     return Grid(z=z, interface_idx=interface_idx, dt=dt, nt_max=nt_max,
-                Z_total=Z_total, dz=dz, t_total=t_total)
+            Z_total=n_cells * dz, dz=dz, t_total=t_total)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

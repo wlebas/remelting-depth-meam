@@ -30,12 +30,12 @@ AL_SI12 = {
     # Near-eutectic Al-Si.  Narrow mushy zone (4 °C, 0.7 % of T_sol).
     # Lowest k_p in the set — Si strongly rejects to liquid.
     # Ste_s = 0.700.  A×Ste confirmed 0.110 (within universal band).
-    'T_liq': 581.0,  'T_sol': 577.0,
-    'k_s': 121.0,    'k_l': 91.8,
-    'rho_s': 2657.0, 'rho_l': 2371.0,
-    'cp_s': 963.0,   'cp_l': 1127.5,
-    'L': 3.89e5,
-    'k_p': 0.13, 'model': 'scheil',  # Scheil model required to capture near-eutectic behaviour
+    'T_liq': 577.0,  'T_sol': 576.9,
+    'k_s': 193.0,    'k_l': 68,
+    'rho_s': 2661.0, 'rho_l': 2400.0,
+    'cp_s': 1038.0,   'cp_l': 1127.5,
+    'L': 4.59e5,
+    'k_p': 1.0, 'model': 'pure_metal',  # Scheil model required to capture near-eutectic behaviour
 }
 
 # Al-6061 (heat-treatable structural aluminium, common WAAM substrate/feedstock)
