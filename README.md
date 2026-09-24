@@ -115,3 +115,8 @@ should be checked before combining results across runs.
 
 Citation details will be added on publication. A `CITATION.cff` will be added
 once a DOI is assigned.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
