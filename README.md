@@ -1,7 +1,7 @@
 # Inter-Layer Remelting in Metal Extrusion Additive Manufacturing
 
 Analytical and numerical framework for predicting inter-layer remelting during
-metal extrusion additive manufacturing (MEX/WAAM). The code implements a
+metal extrusion additive manufacturing (MEAM). The code implements a
 one-dimensional enthalpy-based finite-difference solver for the two-domain
 Stefan problem (hot deposit on cold substrate), a dimensionless
 Latin-hypercube sweep driver, and the analysis pipeline used to derive and
@@ -16,11 +16,6 @@ The problem is parameterised by the dimensionless groups swept in
 `dimensionless_sweep_pure.py`: effusivity ratio `E`, heat-capacity ratio `C`,
 diffusivity ratio `r`, Stefan numbers `Ste_hot` and `Ste_cold`, and the
 normalised melting temperature `θ_m`.
-
-## Status
-
-Manuscript in preparation; target venue IJHMT. The repository will be tagged
-at the commit corresponding to submission (`v1.0-submission`).
 
 ## Repository contents
 
@@ -101,20 +96,6 @@ dimensionless groups, derived quantities (`lam_neumann`, `k_ratio`,
 `rho_ratio`, …), solver outputs (`D_rem`, `t_at_max_remelt`, `Z_total`), and
 provenance flags (`refined`, `time_capped`, `domain_capped`, `status`,
 `config_fingerprint`).
-
-
-## Reproducibility
-
-Full sweeps were executed on the EPFL RCP cluster (Kubernetes / Run:ai) using
-the container defined in `Dockerfile`. The sweep drivers run unmodified on a
-local multicore machine at reduced throughput. Every results file records a
-`config_fingerprint` identifying the `PARAMS` set used to generate it; this
-should be checked before combining results across runs.
-
-## Citation
-
-Citation details will be added on publication. A `CITATION.cff` will be added
-once a DOI is assigned.
 
 ## License
 
