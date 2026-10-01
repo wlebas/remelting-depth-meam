@@ -61,32 +61,6 @@ Usage
     3. Provide a per-case analytical cross-check (λ exists ↔ onset criterion met).
   Cost: ~0.05–0.2 s per case (1D root-find vs 2D grid scan for Scheil).
   The flag defaults to False to keep the sweep fast for initial runs.
-
-Note on existing data
----------------------
-  If you want to analyse results_refined.csv with analyse_sweep_pure.py,
-  pass --legacy_csv results_refined.csv to that script instead of re-running
-  this sweep.  The column mapping is documented in analyse_sweep_pure.py.
-
-CHANGELOG
----------
-  [fix] run_one()'s four return paths (guard-skip, sizing-error, solver-error,
-        success) previously built their row dicts independently, with
-        different key sets — the skip/error paths spread **adim (which
-        includes 'theta_liquidus' and 'B', but never 'theta_melt' or
-        'config_fingerprint'), while the success path used explicit keys
-        (including 'theta_melt' and 'config_fingerprint', but never
-        'theta_liquidus' or 'B'). If a checkpoint batch (P.checkpoint_every
-        rows) happened to land entirely on one path — e.g. all guard-skips —
-        pd.DataFrame(buf) built a narrower-than-header DataFrame for that
-        batch, and writing it with header=False silently misaligned every
-        column for the whole batch. Fixed by introducing ROW_SCHEMA + a
-        _blank_row() helper: every return path now builds from the identical
-        23-key schema, so column-count drift between batches is no longer
-        possible. As a side effect, 'theta_contact' is now populated on
-        skip/error rows too (previously only on success rows) — this is a
-        strict improvement, not a behaviour change anyone should rely on
-        the absence of.
 """
 
 import argparse
