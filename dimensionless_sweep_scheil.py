@@ -69,26 +69,6 @@ Usage
   Cost: ~0.5 s per case (2D 30×30 grid scan + fsolve polish).
   Defaults to False; enable for production runs where column completeness matters.
 
-CHANGELOG
----------
-  [fix] run_one()'s four return paths (guard-skip, sizing-error, solver-error,
-        success) previously built their row dicts independently, with
-        different key sets — the skip/error paths spread **adim (which
-        includes 'theta_liquidus', 'theta_solidus', 'Ste_m', 'inv_Ste',
-        'k_ratio', 'rho_ratio', 'cp_ratio', 'B', 'theta_contact', but never
-        'config_fingerprint'), while the success path used a different
-        explicit key set entirely. If a checkpoint batch (P.checkpoint_every
-        rows) happened to land entirely on one path, pd.DataFrame(buf) built
-        a narrower-than-header DataFrame for that batch, and writing it with
-        header=False silently misaligned every column for the whole batch —
-        this exact failure mode was confirmed in the pure-metal sweep's
-        output and is the same underlying bug here. Fixed by introducing
-        ROW_SCHEMA + a _blank_row() helper: every return path now builds
-        from the identical key schema, so column-count drift between
-        checkpoint batches is no longer possible.
-  [fix] _make_lhs_sampler() lost its scipy-version fallback at some point —
-        restored the try rng= / except TypeError: seed= pattern so this
-        still runs on scipy < 1.15 (which only accepts the `seed` kwarg).
 """
 
 import argparse
