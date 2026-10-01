@@ -14,23 +14,6 @@ run as a script to verify an existing results CSV against all identities:
     python conventions.py --csv results_refined.csv          # + CSV audit
     python conventions.py --csv results_refined.csv --scheil # Scheil CSV
 
-WHY THIS FILE EXISTS
---------------------
-The following bugs were introduced when conventions lived only in comments:
-
-  Bug 1 (critical): _fd_solver_core_pure / _fd_solver_core_scheil computed
-      initial enthalpy with all-ones ρ̃c̃p then corrected properties afterwards.
-      Deposit started with 1/B of its intended energy.  All sweep data void.
-      Fixed June 2026; confirmed by Neumann acceptance test.
-
-  Bug 2 (critical): _fd_solver_core_scheil H(θ) thresholds recomputed each
-      step from current ρ̃c̃p → state-dependent/hysteretic H↔θ map.
-      Fixed June 2026; solid-reference fixed curve adopted.
-
-  Bug 3 (convention): compute_adim_groups() used dT_ref = T_liq − T_sub
-      for inv_Ste, but the sweep uses dT_ref = T_dep − T_sub.  Real-material
-      mapping gives wrong inv_Ste for superheated deposits.
-      Fixed in this file; use adim_groups_from_physical() instead. 
 
 CONVENTIONS (definitive)
 ------------------------
