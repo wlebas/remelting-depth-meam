@@ -45,8 +45,7 @@ import hashlib
 @dataclass(frozen=True)
 class Conventions:
     """
-    Physical and mathematical definitions. These are not tuning knobs — changing
-    any of them invalidates every fitted correlation and every CSV produced.
+    Physical and mathematical definitions.
     """
 
     # ── Dimensionless group keys (the identity of a case) ─────────────────────

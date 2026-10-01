@@ -1,17 +1,14 @@
 """
 This file contains the kernels for the remelted depth solver
 There are two solvers, one for alloys and one for pure metals or eutectics. Note that the Scheil solver takes longer and is more expensive to run.
-"""
-import numpy as np
-from numba import jit
 
-"""
-_fd_solver_core_pure — CORRECTED KERNEL
+_fd_solver_core_pure 
 =======================================
 This is an enthalpy based solver for the pure-metal / eutectic case, with a fixed isothermal constitutive curve at the melting temperature.  
 The enthalpy-temperature relationship is piecewise linear with constant thresholds:
 """
-
+import numpy as np
+from numba import jit
 
 @jit(nopython=True, cache=True)
 def _fd_solver_core_pure(
@@ -272,10 +269,6 @@ def _fd_solver_core_scheil(
         dt, nt_max, snapshot_indices):
     """
     JIT-compiled time loop for the Scheil enthalpy solver.
- 
-    Key change vs previous version: uses a FIXED, SOLID-REFERENCED constitutive
-    curve H(θ) with constant thresholds H_sol_thresh and H_liq_thresh.
-    rho_tilde and cp_tilde arrays are removed; only k_tilde is needed.
     """
  
     nz         = len(z)

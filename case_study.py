@@ -11,8 +11,7 @@ in their big-sweep progress.csv files.
 This is deliberately NOT a sweep. It exists to let you actually look at a
 handful of representative cases in detail -- plot the melt-front trajectory,
 the temperature profile at the moment of peak remelting, the full θ(z)
-snapshot history as a function of time -- which the 30,000/36,000-row sweep
-CSVs were never built to retain.
+snapshot history as a function of time.
 
 Pipeline per case (identical physics/sizing/refinement logic to the big
 sweeps, just not thrown away afterwards):

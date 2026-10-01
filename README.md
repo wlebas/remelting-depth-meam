@@ -103,19 +103,6 @@ provenance flags (`refined`, `time_capped`, `domain_capped`, `status`,
 `config_fingerprint`).
 
 
-## Reproducibility
-
-Full sweeps were executed on the EPFL RCP cluster (Kubernetes / Run:ai) using
-the container defined in `Dockerfile`. The sweep drivers run unmodified on a
-local multicore machine at reduced throughput. Every results file records a
-`config_fingerprint` identifying the `PARAMS` set used to generate it; this
-should be checked before combining results across runs.
-
-## Citation
-
-Citation details will be added on publication. A `CITATION.cff` will be added
-once a DOI is assigned.
-
 ## License
 
 MIT — see [LICENSE](LICENSE).
