@@ -14,6 +14,10 @@ run as a script to verify an existing results CSV against all identities:
     python conventions.py --csv results_refined.csv          # + CSV audit
     python conventions.py --csv results_refined.csv --scheil # Scheil CSV
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 47d307f75ee58d62e76d610fd85c80031ba9eae1
 CONVENTIONS (definitive)
 ------------------------
 θ-normalisation (full-swing):

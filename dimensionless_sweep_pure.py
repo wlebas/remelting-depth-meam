@@ -61,7 +61,10 @@ Usage
     3. Provide a per-case analytical cross-check (λ exists ↔ onset criterion met).
   Cost: ~0.05–0.2 s per case (1D root-find vs 2D grid scan for Scheil).
   The flag defaults to False to keep the sweep fast for initial runs.
+<<<<<<< HEAD
 
+=======
+>>>>>>> 47d307f75ee58d62e76d610fd85c80031ba9eae1
 """
 
 import argparse
