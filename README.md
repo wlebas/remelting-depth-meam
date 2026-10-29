@@ -97,10 +97,6 @@ dimensionless groups, derived quantities (`lam_neumann`, `k_ratio`,
 provenance flags (`refined`, `time_capped`, `domain_capped`, `status`,
 `config_fingerprint`).
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 47d307f75ee58d62e76d610fd85c80031ba9eae1
 ## License
 
 MIT — see [LICENSE](LICENSE).
