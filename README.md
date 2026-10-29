@@ -1,4 +1,4 @@
-# Predicting the Substrate Remelting Depth in Liquid Metal Deposition Processesg
+# Predicting the Substrate Remelting Depth in Liquid Metal Deposition Processes
 
 Analytical and numerical framework for predicting inter-layer remelting during
 metal extrusion additive manufacturing (MEAM). The code implements a
